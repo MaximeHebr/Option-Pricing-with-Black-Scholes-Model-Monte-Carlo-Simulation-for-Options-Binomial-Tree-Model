@@ -5,6 +5,10 @@
 #include <iomanip>
 #include <chrono>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 using namespace std;
 
 void printHeader(const string& title) {
@@ -24,11 +28,38 @@ double measureTime(Func&& func) {
 void example1_BasicComparison() {
     printHeader("Exemple 1: Comparaison des trois méthodes");
     
-    auto option = make_shared<VanillaOption>(100.0, 1.0, OptionType::CALL);
-    auto market = make_shared<MarketData>(100.0, 0.05, 0.20, 0.0);
+    double spot, strike, maturity, rate, vol, dividend;
+    char optionTypeChoice;
     
-    cout << "\nOption: Call européen, Strike=100, Maturité=1 an\n";
-    cout << "Marché: S=100, r=5%, σ=20%\n\n";
+    cout << "\n=== PARAMÈTRES DE L'OPTION ===\n";
+    cout << "Prix spot (ex: 100): ";
+    cin >> spot;
+    cout << "Strike (ex: 100): ";
+    cin >> strike;
+    cout << "Maturité en années (ex: 1): ";
+    cin >> maturity;
+    cout << "Type (C pour Call, P pour Put): ";
+    cin >> optionTypeChoice;
+    
+    cout << "\n=== PARAMÈTRES DE MARCHÉ ===\n";
+    cout << "Taux sans risque en % (ex: 5): ";
+    cin >> rate;
+    rate /= 100.0;  // Convert to decimal
+    cout << "Volatilité en % (ex: 20): ";
+    cin >> vol;
+    vol /= 100.0;  // Convert to decimal
+    cout << "Dividende en % (ex: 0): ";
+    cin >> dividend;
+    dividend /= 100.0;  // Convert to decimal
+    
+    OptionType type = (optionTypeChoice == 'C' || optionTypeChoice == 'c') ? OptionType::CALL : OptionType::PUT;
+    
+    auto option = make_shared<VanillaOption>(strike, maturity, type);
+    auto market = make_shared<MarketData>(spot, rate, vol, dividend);
+    
+    cout << "\nOption: " << (type == OptionType::CALL ? "Call" : "Put") 
+         << " européen, Strike=" << strike << ", Maturité=" << maturity << " an(s)\n";
+    cout << "Marché: S=" << spot << ", r=" << (rate*100) << "%, σ=" << (vol*100) << "%\n\n";
     
     // Black-Scholes
     BlackScholesPricer bs(option, market);
@@ -63,11 +94,29 @@ void example1_BasicComparison() {
 void example2_AmericanOption() {
     printHeader("Exemple 2: Option américaine vs européenne");
     
-    auto american = make_shared<VanillaOption>(110.0, 1.0, OptionType::PUT, ExerciseStyle::AMERICAN);
-    auto european = make_shared<VanillaOption>(110.0, 1.0, OptionType::PUT);
-    auto market = make_shared<MarketData>(90.0, 0.05, 0.20, 0.0);
+    double spot, strike, maturity, rate, vol;
     
-    cout << "\nPut profondément dans la monnaie (S=90, K=110)\n\n";
+    cout << "\n=== PARAMÈTRES DE L'OPTION PUT ===\n";
+    cout << "Prix spot (ex: 90): ";
+    cin >> spot;
+    cout << "Strike (ex: 110): ";
+    cin >> strike;
+    cout << "Maturité en années (ex: 1): ";
+    cin >> maturity;
+    
+    cout << "\n=== PARAMÈTRES DE MARCHÉ ===\n";
+    cout << "Taux sans risque en % (ex: 5): ";
+    cin >> rate;
+    rate /= 100.0;
+    cout << "Volatilité en % (ex: 20): ";
+    cin >> vol;
+    vol /= 100.0;
+    
+    auto american = make_shared<VanillaOption>(strike, maturity, OptionType::PUT, ExerciseStyle::AMERICAN);
+    auto european = make_shared<VanillaOption>(strike, maturity, OptionType::PUT);
+    auto market = make_shared<MarketData>(spot, rate, vol, 0.0);
+    
+    cout << "\nPut (S=" << spot << ", K=" << strike << ")\n\n";
     
     BlackScholesPricer bsEuro(european, market);
     double euroPrice = bsEuro.calculatePrice();
@@ -83,22 +132,46 @@ void example2_AmericanOption() {
 void example3_AsianOption() {
     printHeader("Exemple 3: Option asiatique");
     
-    auto asian = make_shared<AsianOption>(100.0, 1.0, OptionType::CALL);
-    auto vanilla = make_shared<VanillaOption>(100.0, 1.0, OptionType::CALL);
-    auto market = make_shared<MarketData>(100.0, 0.05, 0.25, 0.0);
+    double spot, strike, maturity, rate, vol;
+    char optionTypeChoice;
     
-    cout << "\nComparaison Call vanille vs Call asiatique\n\n";
+    cout << "\n=== PARAMÈTRES DE L'OPTION ===\n";
+    cout << "Prix spot (ex: 100): ";
+    cin >> spot;
+    cout << "Strike (ex: 100): ";
+    cin >> strike;
+    cout << "Maturité en années (ex: 1): ";
+    cin >> maturity;
+    cout << "Type (C pour Call, P pour Put): ";
+    cin >> optionTypeChoice;
+    
+    cout << "\n=== PARAMÈTRES DE MARCHÉ ===\n";
+    cout << "Taux sans risque en % (ex: 5): ";
+    cin >> rate;
+    rate /= 100.0;
+    cout << "Volatilité en % (ex: 25): ";
+    cin >> vol;
+    vol /= 100.0;
+    
+    OptionType type = (optionTypeChoice == 'C' || optionTypeChoice == 'c') ? OptionType::CALL : OptionType::PUT;
+    
+    auto asian = make_shared<AsianOption>(strike, maturity, type);
+    auto vanilla = make_shared<VanillaOption>(strike, maturity, type);
+    auto market = make_shared<MarketData>(spot, rate, vol, 0.0);
+    
+    string typeStr = (type == OptionType::CALL) ? "Call" : "Put";
+    cout << "\nComparaison " << typeStr << " vanille vs " << typeStr << " asiatique\n\n";
     
     BlackScholesPricer bsVanilla(vanilla, market);
     double vanillaPrice = bsVanilla.calculatePrice();
-    cout << "Call vanille: " << fixed << setprecision(4) << vanillaPrice << "\n";
+    cout << typeStr << " vanille: " << fixed << setprecision(4) << vanillaPrice << "\n";
     
     MonteCarloPricer mcAsian(asian, market, 50000, 252);
     auto [asianPrice, asianError] = mcAsian.calculatePriceWithError();
-    cout << "Call asiatique: " << asianPrice << " ± " << asianError << "\n";
+    cout << typeStr << " asiatique: " << asianPrice << " ± " << asianError << "\n";
     
-    cout << "\nL'option asiatique est moins chère (volatilité réduite)\n";
-    cout << "Différence: " << vanillaPrice - asianPrice << "\n";
+    cout << "\nL'option asiatique est généralement moins chère (volatilité réduite)\n";
+    cout << "Différence: " << abs(vanillaPrice - asianPrice) << "\n";
 }
 
 void runAllExamples() {
@@ -115,6 +188,9 @@ void runAllExamples() {
 }
 
 int main() {
+    #ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+    #endif
     cout << fixed << setprecision(4);
     
     while (true) {
@@ -140,10 +216,22 @@ int main() {
         try {
             switch (choice) {
                 case 0: return 0;
-                case 1: example1_BasicComparison(); break;
-                case 2: example2_AmericanOption(); break;
-                case 3: example3_AsianOption(); break;
-                case 4: runAllExamples(); break;
+                case 1: 
+                    cin.ignore(10000, '\n');
+                    example1_BasicComparison(); 
+                    break;
+                case 2: 
+                    cin.ignore(10000, '\n');
+                    example2_AmericanOption(); 
+                    break;
+                case 3: 
+                    cin.ignore(10000, '\n');
+                    example3_AsianOption(); 
+                    break;
+                case 4: 
+                    cin.ignore(10000, '\n');
+                    runAllExamples(); 
+                    break;
                 default: cout << "\nChoix invalide\n";
             }
         } catch (const exception& e) {

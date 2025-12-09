@@ -9,11 +9,11 @@
 #include <cmath>
 #include <numbers>
 
-// Abstract base class for all pricing engines
+// Classe de base pour les pricers
 class Pricer {
 protected:
-    std::shared_ptr<Option> option_;
-    std::shared_ptr<MarketData> marketData_;
+    std::shared_ptr<Option> option_; // option à pricer
+    std::shared_ptr<MarketData> marketData_; // données de marché associées à cette option 
     
 public:
     Pricer(std::shared_ptr<Option> option, std::shared_ptr<MarketData> marketData)
@@ -24,18 +24,18 @@ public:
     virtual std::string getMethodName() const = 0;
 };
 
-// Black-Scholes analytical pricing
+// Black-Scholes pricer
 class BlackScholesPricer : public Pricer {
 private:
     mutable double d1_, d2_;
-    mutable bool calculated_;
+    mutable bool calculated_; // pour savoir si d1 et d2 ont été calculés
     
     static double normalCDF(double x) {
         return 0.5 * (1.0 + std::erf(x / std::sqrt(2.0)));
     }
-    
+
     static double normalPDF(double x) {
-        return (1.0 / std::sqrt(2.0 * std::numbers::pi)) * std::exp(-0.5 * x * x);
+        return (1.0 / std::sqrt(2.0 * std::numbers::pi)) * std::exp(-0.5 * x * x); 
     }
     
     void calculateD1D2() const {
@@ -58,7 +58,7 @@ public:
     BlackScholesPricer(std::shared_ptr<Option> option, std::shared_ptr<MarketData> marketData)
         : Pricer(option, marketData), calculated_(false) {
         if (!option->isEuropean()) {
-            throw std::invalid_argument("Black-Scholes only works for European options");
+            throw std::invalid_argument("Black-Scholes only works for European options");// on vérifie que l'option est européenne car le modèle de Black-Scholes ne s'applique qu'aux options européennes.
         }
     }
     
@@ -77,9 +77,9 @@ public:
         double dividendFactor = std::exp(-q * T);
         
         if (option_->isCall()) {
-            return S * dividendFactor * Nd1 - K * discountFactor * Nd2;
+            return S * dividendFactor * Nd1 - K * discountFactor * Nd2; // formule de Black-Scholes pour un call européen
         } else {
-            return K * discountFactor * normalCDF(-d2_) - S * dividendFactor * normalCDF(-d1_);
+            return K * discountFactor * normalCDF(-d2_) - S * dividendFactor * normalCDF(-d1_); // formule de Black-Scholes pour un put européen
         }
     }
     
@@ -136,12 +136,12 @@ public:
     std::string getMethodName() const override { return "Black-Scholes"; }
 };
 
-// Binomial tree pricing
+// Binomial tree pricer
 class BinomialTreePricer : public Pricer {
 private:
-    int numSteps_;
-    std::vector<double> optionValues_;
-    double dt_, u_, d_, p_, discountFactor_;
+    int numSteps_; // nombre d'étapes dans l'arbre binomial (plus il y en a, plus le prix est précis mais le calcul est long)
+    std::vector<double> optionValues_; // valeurs de l'option aux nœuds de l'arbre
+    double dt_, u_, d_, p_, discountFactor_; 
     
     void calculateTreeParameters() {
         double T = option_->getMaturity();
@@ -178,16 +178,16 @@ public:
         
         // Terminal values
         for (int i = 0; i <= numSteps_; ++i) {
-            double spotAtNode = S * std::pow(u_, i) * std::pow(d_, numSteps_ - i);
-            optionValues_[i] = option_->payoff(spotAtNode);
+            double spotAtNode = S * std::pow(u_, i) * std::pow(d_, numSteps_ - i);// prix du sous-jacent au nœud final
+            optionValues_[i] = option_->payoff(spotAtNode);// valeur de l'option au nœud final
         }
         
         // Backward induction
         for (int step = numSteps_ - 1; step >= 0; --step) {
             for (int i = 0; i <= step; ++i) {
-                double continuationValue = discountFactor_ * (p_ * optionValues_[i + 1] + (1.0 - p_) * optionValues_[i]);
+                double continuationValue = discountFactor_ * (p_ * optionValues_[i + 1] + (1.0 - p_) * optionValues_[i]);// valeur actualisée attendue
                 double spotAtNode = S * std::pow(u_, i) * std::pow(d_, step - i);
-                optionValues_[i] = checkEarlyExercise(spotAtNode, continuationValue);
+                optionValues_[i] = checkEarlyExercise(spotAtNode, continuationValue);// vérifier l'exercice anticipé pour les options américaines
             }
         }
         
@@ -202,9 +202,9 @@ class MonteCarloPricer : public Pricer {
 private:
     int numSimulations_;
     int numTimeSteps_;
-    unsigned int seed_;
-    mutable std::mt19937 generator_;
-    mutable std::normal_distribution<double> normalDist_;
+    unsigned int seed_;// graine pour le générateur de nombres aléatoires
+    mutable std::mt19937 generator_; // générateur de nombres aléatoires Mersenne Twister ( on en prend pas rand() car il est moins performant et moins fiable statistiquement)
+    mutable std::normal_distribution<double> normalDist_; 
     
 protected:
     double generateNormal() const { return normalDist_(generator_); }
@@ -216,8 +216,8 @@ protected:
         double q = marketData_->getDividendYield();
         double sigma = marketData_->getVolatility();
         
-        double dt = T / numTimeSteps_;
-        double drift = (r - q - 0.5 * sigma * sigma) * dt;
+        double dt = T / numTimeSteps_; // pas de temps
+        double drift = (r - q - 0.5 * sigma * sigma) * dt; 
         double diffusion = sigma * std::sqrt(dt);
         
         double currentPrice = S;
@@ -261,7 +261,7 @@ public:
         : Pricer(option, marketData), numSimulations_(numSimulations), 
           numTimeSteps_(numTimeSteps), seed_(seed), generator_(seed), normalDist_(0.0, 1.0) {
         if (numSimulations <= 0 || numTimeSteps <= 0) {
-            throw std::invalid_argument("Simulations and time steps must be positive");
+            throw std::invalid_argument("Simulations and time steps must be positive"); // on vérifie que le nombre de simulations et le nombre de pas de temps sont positifs pour que le calcul soit cohérent.
         }
     }
     
@@ -270,20 +270,20 @@ public:
         double T = option_->getMaturity();
         double discountFactor = std::exp(-r * T);
         
-        bool isPathDependent = (dynamic_cast<AsianOption*>(option_.get()) != nullptr);
+        bool isPathDependent = (dynamic_cast<AsianOption*>(option_.get()) != nullptr); // vérifier si l'option est path-dependent (asiatique)
         
         double sumPayoffs = 0.0;
         for (int i = 0; i < numSimulations_; ++i) {
             double payoff = 0.0;
             
-            if (isPathDependent) {
+            if (isPathDependent) { // option asiatique on doit simuler le chemin complet 
                 auto path = simulateFullPath();
                 auto asianOption = std::dynamic_pointer_cast<AsianOption>(option_);
                 if (asianOption) {
                     asianOption->setPricePath(path);
                     payoff = asianOption->payoff(path.back());
                 }
-            } else {
+            } else {// option vanille on simule juste le prix final
                 double finalPrice = simulatePath();
                 payoff = option_->payoff(finalPrice);
             }
@@ -291,7 +291,7 @@ public:
             sumPayoffs += payoff;
         }
         
-        return discountFactor * sumPayoffs / numSimulations_;
+        return discountFactor * sumPayoffs / numSimulations_; // prix moyen actualisé
     }
     
     std::pair<double, double> calculatePriceWithError() {
@@ -330,7 +330,7 @@ public:
         }
         variance /= (numSimulations_ - 1);
         double stdDev = std::sqrt(variance);
-        double standardError = stdDev / std::sqrt(numSimulations_);
+        double standardError = stdDev / std::sqrt(numSimulations_); // erreur standard du prix estimé
         
         return {discountFactor * mean, discountFactor * standardError};
     }

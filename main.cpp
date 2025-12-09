@@ -32,7 +32,7 @@ void example1_BasicComparison() {
     char optionTypeChoice;
     
     cout << "\n=== PARAMÈTRES DE L'OPTION ===\n";
-    cout << "Prix spot (ex: 100): ";
+    cout << "Spot price (ex: 100): ";
     cin >> spot;
     cout << "Strike (ex: 100): ";
     cin >> strike;
@@ -97,7 +97,7 @@ void example2_AmericanOption() {
     double spot, strike, maturity, rate, vol;
     
     cout << "\n=== PARAMÈTRES DE L'OPTION PUT ===\n";
-    cout << "Prix spot (ex: 90): ";
+    cout << "Spot price (ex: 90): ";
     cin >> spot;
     cout << "Strike (ex: 110): ";
     cin >> strike;
@@ -136,7 +136,7 @@ void example3_AsianOption() {
     char optionTypeChoice;
     
     cout << "\n=== PARAMÈTRES DE L'OPTION ===\n";
-    cout << "Prix spot (ex: 100): ";
+    cout << "Spot price (ex: 100): ";
     cin >> spot;
     cout << "Strike (ex: 100): ";
     cin >> strike;
@@ -188,9 +188,13 @@ void runAllExamples() {
 }
 
 int main() {
+
+    // Pour bien afficher les caractères UTF-8 sous Windows
     #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
     #endif
+
+
     cout << fixed << setprecision(4);
     
     while (true) {

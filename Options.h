@@ -22,18 +22,18 @@ public:
     Option(double strike, double maturity, OptionType type, ExerciseStyle style = ExerciseStyle::EUROPEAN)
         : strike_(strike), maturity_(maturity), type_(type), style_(style) {
         if (strike <= 0 || maturity <= 0) {
-            throw std::invalid_argument("Strike and maturity must be positive");
+            throw std::invalid_argument("Strike and maturity must be positive"); // on vérifie que le strike et la maturité sont positifs pour que ce soit cohérent avec le contexte financier.
         }
     }
     
     virtual ~Option() = default;
     virtual double payoff(double spotPrice) const = 0;
-    
+    // Getters pour éviter l'accès direct aux membres privés
     double getStrike() const { return strike_; }
     double getMaturity() const { return maturity_; }
     OptionType getType() const { return type_; }
     ExerciseStyle getStyle() const { return style_; }
-    
+
     bool isCall() const { return type_ == OptionType::CALL; }
     bool isPut() const { return type_ == OptionType::PUT; }
     bool isEuropean() const { return style_ == ExerciseStyle::EUROPEAN; }
@@ -57,6 +57,7 @@ public:
 };
 
 // Asian option (path-dependent)
+// Une option asiatique dont le payoff dépend du prix moyen du sous-jacent sur une période donnée
 class AsianOption : public Option {
 private:
     std::vector<double> pricePath_;

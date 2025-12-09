@@ -104,7 +104,7 @@ où Z suit une loi normale N(0,1).
 
 ## Améliorations possibles
 
-- Paralléliser Monte Carlo avec OpenMP (facile à faire)
+- Paralléliser Monte Carlo (avec OpenMP)
 - Ajouter d'autres options exotiques (barrières, lookback...)
 - Implémenter Longstaff-Schwartz pour les américaines avec MC
 - Calculer la volatilité implicite (Newton-Raphson)
